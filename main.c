@@ -1,5 +1,5 @@
-#include "binairo.h"
 #include <stdio.h>
+#include "takuzu.h"
 
 
 int main(void)
