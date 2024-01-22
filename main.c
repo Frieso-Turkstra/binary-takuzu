@@ -1,9 +1,8 @@
 #include <stdio.h>
-#include <time.h>
 #include "takuzu.h"
 
 
-int main(void)
+int main(int argc, char** argv)
 {
     /* An unsigned long long is used to represented a grid, in which each cell
     is represented by a bit (unsigned long long is 64 bits so the max grid size
@@ -13,9 +12,15 @@ int main(void)
     unsigned long long grid = 0;
     unsigned long long actions = -1;
 
-    load(&grid, &actions);
-    printGrid(grid, actions);
-    solve(grid, actions);
+    // Read puzzle from command-line and update grid and actions accordingly.
+    if (argc != 2)
+    {
+        printf("Usage: .\\takuzu.exe 'puzzle_string'");
+        return 1;
+    }
+    const char* puzzle = argv[1];
+    if (load(puzzle, &grid, &actions));
+        solve(grid, actions);
 
     return 0;
 }

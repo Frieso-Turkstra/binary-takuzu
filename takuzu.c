@@ -182,17 +182,9 @@ void printGrid  (unsigned long long grid, unsigned long long actions)
     printf("\n");
 }
 
-int bit_count(unsigned long long number)
-{
-    int count;
-    for (count = 0; number; number >>= 1)
-    {
-        count += number & 1U;
-    }
-    return count;
-}
 
-unsigned long long solve(unsigned long long grid, unsigned long long actions)
+// Add documentation, i.e. doxygen comment
+bool solve(unsigned long long grid, unsigned long long actions)
 {
     //if (!actions && isValid(grid, actions))
     //{
@@ -239,187 +231,36 @@ unsigned long long solve(unsigned long long grid, unsigned long long actions)
     return true;
 }
 
-
-/*---TEMP/UTILS FUNCTIONS-----------------------------------------------------*/
-
-void load(unsigned long long* state, unsigned long long* actions)
+bool load(const char* puzzle, unsigned long long* grid, unsigned long long* actions)
 {
-    /*
-    This is a temporary function and is going to be replaced by either a full
-    binary puzzle generator or a simple binary string to integer function. 
-    */
-    
-    enum cell { EMPTY, WHITE, BLACK };
-    enum cell puzzle_0[N*N] = {
-        EMPTY, EMPTY, EMPTY, EMPTY, WHITE, EMPTY,
-        BLACK, EMPTY, EMPTY, BLACK, EMPTY, EMPTY,
-        BLACK, EMPTY, BLACK, BLACK, EMPTY, EMPTY,
-        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
-        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
-        WHITE, WHITE, EMPTY, EMPTY, WHITE, EMPTY,
-    };
-    enum cell puzzle_2[N*N] = {
-        EMPTY, WHITE, EMPTY, EMPTY, WHITE, WHITE,
-        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
-        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
-        EMPTY, EMPTY, BLACK, BLACK, EMPTY, BLACK,
-        EMPTY, EMPTY, BLACK, EMPTY, EMPTY, BLACK,
-        EMPTY, WHITE, EMPTY, EMPTY, EMPTY, EMPTY,
-    };
-    enum cell puzzle_1[N*N] = {
-        EMPTY, EMPTY, EMPTY, WHITE, WHITE, WHITE,
-        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
-        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
-        EMPTY, EMPTY, BLACK, BLACK, EMPTY, BLACK,
-        EMPTY, EMPTY, BLACK, EMPTY, EMPTY, BLACK,
-        EMPTY, WHITE, EMPTY, EMPTY, EMPTY, EMPTY,
-    };
-    enum cell puzzle[N*N] = {
-        EMPTY, WHITE, EMPTY, EMPTY, WHITE, EMPTY, EMPTY, EMPTY,
-        EMPTY, EMPTY, BLACK, EMPTY, EMPTY, BLACK, EMPTY, BLACK,
-        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
-        WHITE, EMPTY, WHITE, WHITE, EMPTY, EMPTY, EMPTY, EMPTY,
-        EMPTY, BLACK, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
-        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
-        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, BLACK, EMPTY,
-        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, WHITE,
-    };
+    // check for invalid characters and assert length = 4, 16, 36 or 64
 
-    // update state/actions
-    for (int i = 0; i < N*N; i++)
+    unsigned long long bit_mask = 1ULL;
+    while(*puzzle)
     {
-        // skip empty cells
-        if (puzzle[i] == EMPTY) { continue; }
-        
-        // cell is already occupied so remove it from actions
+        // Ensure only valid characters are used
+        if (*puzzle != '1' && *puzzle != '0' && *puzzle != ' ')
+        {
+            printf("Invalid character found: %c\n", *puzzle);
+            return false;
+        }
+
+        if (*puzzle == ' ') { bit_mask <<= 1; puzzle++; continue; } // skip empty cells
+
+        *actions ^= bit_mask; // cell is full so remove it from actions
+
         // white cells are set to 1 (black cells are already 0)
-        *actions ^= 1ULL << i; 
-        if (puzzle[i] == WHITE) { *state |= 1ULL << i; }
-    }
-}
+        if (*puzzle == '1') { *grid |= bit_mask; }
 
-void bitPrint(unsigned long long number, int n)
-{
-    // Prints the first n bits of 'number'
-    for (int i = 0; i < n; i++)
+        bit_mask <<= 1;
+        puzzle++;
+    }
+
+    // only valid lengths are 2x2, 4x4, 6x6, 8x8 (bit_mask should equal 2**number_of_cells)
+    if (bit_mask != 16ULL && bit_mask != 65536ULL && bit_mask != 68719476736ULL && bit_mask != 18446744073709551615ULL)
     {
-        printf("%d", number & 1);
-        number >>= 1;
-    }
-    printf("\n");
-}
-
-unsigned long long str2ull(const char* bits)
-{
-    unsigned long long num = 0;
-    int bitCount = 0;
-
-    while (*bits)
-    {
-        // Invalid character found
-        if (*bits != '0' && *bits != '1') { return ULLONG_MAX; }
-
-        // Set bit equal to value in *bits and left shift
-        num = num << 1 | (*bits++ & 1);
-
-        // Check if the number of bits exceeds 64
-        if (bitCount++ > 64) { return ULLONG_MAX; }
-    }
-    return num;
-}
-
-/*
- 1 | 0 | 0 | 1 | 1 | 0
----+---+---+---+---+---
- 0 | 1 | 1 | 0 | 0 | 1
----+---+---+---+---+---
- 0 | 1 | 0 | 0 | 1 | 1
----+---+---+---+---+---
- 1 | 0 | 1 | 1 | 0 | 0
----+---+---+---+---+---
- 0 | 0 | 1 | 1 | 0 | 1
----+---+---+---+---+---
- 1 | 1 | 0 | 0 | 1 | 0
- */
-
-/*
-bool isValid_backup(unsigned long long grid, unsigned long long actions)
-{
-    unsigned char rows[N];
-    unsigned char cols[N];
-    int rows_index = 0;
-    int cols_index = 0; 
-
-    for (int i = 0; i < N; i++)
-    {   
-        unsigned char row = getRow(grid, i);
-        unsigned char row_actions = getRow(actions, i);
-        unsigned char col = getCol(grid, i);
-        unsigned char col_actions = getCol(actions, i);
-
-        if (!isValidRowOrCol(row, row_actions))
-        {
-            return false;
-        }
-        // row is balanced and has no triplets, now also
-        // check if row is unique, if so, store it
-        for (int j = 0; j < rows_index; j++)
-        {
-            if (row == rows[j]) { printf("not unique\n"); return false; }
-        }
-        rows[rows_index++] = row;
-
-        if (!isValidRowOrCol(col, col_actions))
-        {
-            return false;
-        }
-        // col is balanced and has no triplets, now also
-        // check if row is unique, if so, store it
-        for (int j = 0; j < cols_index; j++)
-        {
-            if (col == cols[j]) { printf("not unique\n"); return false; }
-        }
-        cols[cols_index++] = col;
+        printf("Invalid puzzle length\n");
+        return false;
     }
     return true;
 }
-*/
-
-/*
-This function only works for fully filled in rows and columns
-
-/// @brief Checks if the number of 1's and 0's in a row or column are balanced.
-///
-/// Iterate over the row or column by right shifting once each step.
-/// For each step, add the least significant bit's value to 'count'.
-/// Only set bits can increase 'count' so 'count' represents the number of 1's. 
-/// If N < 8, ensure that all bits beyond N are set to zero.
-///
-/// @param rowOrCol The row or column to be checked for balance.
-///
-/// @return True if the number of set bits makes up half of the size of 
-///         the row or column (size is N), false otherwise.
-bool isBalanced(unsigned char rowOrCol)
-{
-    int count;
-    for (count = 0; rowOrCol; rowOrCol >>= 1)
-    {
-        count += rowOrCol & 1U;
-    }
-    return count == N / 2;
-}
-*/
-
-/*
-This function only works for fully filled in rows and columns
-bool hasTriplets(unsigned char rowOrCol)
-{
-    for (int i = 0; i < N-2; i++)
-    {
-        if (((rowOrCol + 1) & 7U) <= 1){ return true; }
-        rowOrCol >>= 1;
-    }
-    return false;
-}
-*/
-
