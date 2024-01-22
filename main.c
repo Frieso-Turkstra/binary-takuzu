@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <time.h>
 #include "takuzu.h"
 
 
@@ -12,11 +13,9 @@ int main(void)
     unsigned long long grid = 0;
     unsigned long long actions = -1;
 
-    // Load a puzzle into 'grid' and update 'actions' accordingly.
     load(&grid, &actions);
-    prettyPrint(grid, actions);
+    printGrid(grid, actions);
+    solve(grid, actions);
 
-    // Solve the puzzle and print the solution
-    unsigned long long solution = solve(grid, actions);
-    prettyPrint(solution, 0);
+    return 0;
 }

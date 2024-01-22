@@ -158,7 +158,7 @@ bool isValid(unsigned long long grid, unsigned long long actions)
 ///
 /// @param grid The grid to be printed.
 /// @param actions The actions available (empty cells) in the grid.
-void print(unsigned long long grid, unsigned long long actions)
+void printGrid  (unsigned long long grid, unsigned long long actions)
 {
     for (unsigned i = 0; i < N*N; i++)
     {   
@@ -182,38 +182,61 @@ void print(unsigned long long grid, unsigned long long actions)
     printf("\n");
 }
 
-
-unsigned long long solve(unsigned long long state, unsigned long long actions)
+int bit_count(unsigned long long number)
 {
-    if (!actions && isValid(state, actions))
+    int count;
+    for (count = 0; number; number >>= 1)
     {
-        printf("Solved!\n");
-        return state;
+        count += number & 1U;
     }
+    return count;
+}
+
+unsigned long long solve(unsigned long long grid, unsigned long long actions)
+{
+    //if (!actions && isValid(grid, actions))
+    //{
+    //    printf("Solved!\n");
+    //    return grid;
+    //}
 
     // for each possible action
     for (int i = 0; i < N*N; i++)
     {
-        if ((actions >> i) & 1ULL)
+        if ((actions >> i) & 1ULL) // if cell is empty
         {   
-            // try to make it a one and see if it is valid
-            // make sure to make a copy and not change the original state
-            unsigned long long state_copy = state;
-            unsigned long long actions_copy = actions;
-            state_copy |= (1ULL << i);
-            actions_copy ^= (1ULL << i);
+            // try placing a 1
+            unsigned long long new_grid = grid | (1ULL << i);
+            unsigned long long new_actions = actions ^ (1ULL << i);
             
             // if it is valid, call the solve function on the new board
-            if (isValid(state_copy, actions_copy))
+            if (isValid(new_grid, new_actions) && solve(new_grid, new_actions))
             {
-                solve(state_copy, actions_copy);
+                if (!new_actions)
+                {
+                    // printf("Solved!\n");
+                    // printGrid(new_grid, new_actions);
+                }
+                return true;
             }
-            // if it is not solved or we exit from the solve function call above
-            // make the move impossible so it stays a zero
-            // continue to next cell
-            actions ^= (1ULL << i);
+
+            // backtrack, try placing a 0
+            if (isValid(grid, new_actions) && solve(grid, new_actions))
+            {
+                if (!new_actions)
+                {
+                    // printf("Solved!\n");
+                    // printGrid(grid, new_actions);
+                }
+                return true;
+            }
+            return false; // both options failed, backtracking
         }
     }
+    // If no empty cells remain, the puzzle is solved
+    // printf("Solved!\n");
+    // printGrid(grid, actions);
+    return true;
 }
 
 
@@ -227,13 +250,39 @@ void load(unsigned long long* state, unsigned long long* actions)
     */
     
     enum cell { EMPTY, WHITE, BLACK };
-    enum cell puzzle[N*N] = {
+    enum cell puzzle_0[N*N] = {
         EMPTY, EMPTY, EMPTY, EMPTY, WHITE, EMPTY,
         BLACK, EMPTY, EMPTY, BLACK, EMPTY, EMPTY,
         BLACK, EMPTY, BLACK, BLACK, EMPTY, EMPTY,
         EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
         EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
         WHITE, WHITE, EMPTY, EMPTY, WHITE, EMPTY,
+    };
+    enum cell puzzle_2[N*N] = {
+        EMPTY, WHITE, EMPTY, EMPTY, WHITE, WHITE,
+        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+        EMPTY, EMPTY, BLACK, BLACK, EMPTY, BLACK,
+        EMPTY, EMPTY, BLACK, EMPTY, EMPTY, BLACK,
+        EMPTY, WHITE, EMPTY, EMPTY, EMPTY, EMPTY,
+    };
+    enum cell puzzle_1[N*N] = {
+        EMPTY, EMPTY, EMPTY, WHITE, WHITE, WHITE,
+        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+        EMPTY, EMPTY, BLACK, BLACK, EMPTY, BLACK,
+        EMPTY, EMPTY, BLACK, EMPTY, EMPTY, BLACK,
+        EMPTY, WHITE, EMPTY, EMPTY, EMPTY, EMPTY,
+    };
+    enum cell puzzle[N*N] = {
+        EMPTY, WHITE, EMPTY, EMPTY, WHITE, EMPTY, EMPTY, EMPTY,
+        EMPTY, EMPTY, BLACK, EMPTY, EMPTY, BLACK, EMPTY, BLACK,
+        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+        WHITE, EMPTY, WHITE, WHITE, EMPTY, EMPTY, EMPTY, EMPTY,
+        EMPTY, BLACK, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY,
+        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, BLACK, EMPTY,
+        EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, EMPTY, WHITE,
     };
 
     // update state/actions
@@ -278,6 +327,20 @@ unsigned long long str2ull(const char* bits)
     }
     return num;
 }
+
+/*
+ 1 | 0 | 0 | 1 | 1 | 0
+---+---+---+---+---+---
+ 0 | 1 | 1 | 0 | 0 | 1
+---+---+---+---+---+---
+ 0 | 1 | 0 | 0 | 1 | 1
+---+---+---+---+---+---
+ 1 | 0 | 1 | 1 | 0 | 0
+---+---+---+---+---+---
+ 0 | 0 | 1 | 1 | 0 | 1
+---+---+---+---+---+---
+ 1 | 1 | 0 | 0 | 1 | 0
+ */
 
 /*
 bool isValid_backup(unsigned long long grid, unsigned long long actions)
