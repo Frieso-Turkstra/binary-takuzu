@@ -206,8 +206,8 @@ bool solve(unsigned long long grid, unsigned long long actions)
             {
                 if (!new_actions)
                 {
-                    // printf("Solved!\n");
-                    // printGrid(new_grid, new_actions);
+                    printf("Solved!\n");
+                    printGrid(new_grid, new_actions);
                 }
                 return true;
             }
@@ -217,8 +217,8 @@ bool solve(unsigned long long grid, unsigned long long actions)
             {
                 if (!new_actions)
                 {
-                    // printf("Solved!\n");
-                    // printGrid(grid, new_actions);
+                    printf("Solved!\n");
+                    printGrid(grid, new_actions);
                 }
                 return true;
             }
@@ -226,8 +226,8 @@ bool solve(unsigned long long grid, unsigned long long actions)
         }
     }
     // If no empty cells remain, the puzzle is solved
-    // printf("Solved!\n");
-    // printGrid(grid, actions);
+    printf("Solved!\n");
+    printGrid(grid, actions);
     return true;
 }
 

@@ -20,6 +20,7 @@ int main(int argc, char** argv)
     }
     const char* puzzle = argv[1];
     if (load(puzzle, &grid, &actions));
+        // printGrid(grid, actions);
         solve(grid, actions);
 
     return 0;
