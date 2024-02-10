@@ -1,5 +1,5 @@
-#include <stdlib.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "takuzu.h"
 
 
@@ -13,13 +13,13 @@ int main(int argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    if (!isValidPuzzleString(argv[1]))
+    if (!validatePuzzleString(argv[1]))
     {
         return EXIT_FAILURE;
     }
 
     Puzzle puzzle = getPuzzle(argv[1]);
-    
+
     if (!isValid(&puzzle))
     {
         printf("Error: Invalid puzzle provided.\n");
@@ -34,6 +34,6 @@ int main(int argc, char** argv)
     {
         printf("No solution found...\n");
     }
-
+  
     return EXIT_SUCCESS;
 }
