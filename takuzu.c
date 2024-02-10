@@ -1,44 +1,137 @@
-#include <stdio.h>  // for printf()
+#include <stdio.h>
 #include <math.h>
 #include "takuzu.h"
 
 
-/// @brief Extracts the row at the specified index from 'grid'.
-///
-/// The desired row is obtained by right shifting the relevant bits into the 
-/// N least significant bits. The rest of the bits are discarded with a bitmask.
-/// Since N <= 8, converting unsigned long long to unsigned char is safe.
-///
-/// @param grid The unsigned long long integer representing the grid.
-/// @param index The index of the row to retrieve (0 is bottom, N-1 is top row).
-///
-/// @return The extracted row as an unsigned char. 
-unsigned char getRow(unsigned long long grid, int index, unsigned size)
-{
-    return (grid >> index * size) & (1 << size) - 1; 
+/**
+ * @brief Recursively solves a Takuzu puzzle.
+ * 
+ * For each empty cell in the grid, try 0 (a cell is 0 by default so we only
+ * update actions). If the new grid is valid, solve it. If not, we fill in a 1.
+ * If that also fails, the puzzle is not solvable. If no empty cells remain,
+ * the puzzle is solved and printed.
+ * 
+ * @param puzzle The Takuzu puzzle to be solved.
+ * 
+ * @return true if a solution is found, false otherwise.
+ */
+bool solve(Puzzle puzzle)
+{   
+    for (int i = 0; i < puzzle.size*puzzle.size; i++)
+    {
+        if (!(puzzle.actions & 1ULL << i)) { continue; }
+
+        puzzle.actions ^= 1ULL << i; 
+        if (isValid(&puzzle) && solve(puzzle)) { return true; }
+
+        puzzle.grid |= 1ULL << i;
+        if (isValid(&puzzle) && solve(puzzle)){ return true; }
+
+        return false;
+    }
+    printPuzzle(&puzzle);
+    return true;
 }
 
-/// @brief Extracts the column at the specified index from 'grid'.
-///
-/// The desired column is obtained by first aligning the relevant column
-/// with the least significant bit, 'grid >>= index'. Then, we can iterate
-/// through each row in the column by right shifting the grid N positions.
-/// The current value of col is left shifted by 1 to make room for the next bit.
-/// Lastly, bitwise OR that next bit with the least significant bit of 'grid'.
-/// Since N <= 8, converting unsigned long long to unsigned char is safe.
-///
-/// @param grid The unsigned long long integer representing the grid.
-/// @param index The index of the column to retrieve (0 is right, N-1 is left column).
-///
-/// @return The extracted column as an unsigned char. 
-unsigned char getCol(unsigned long long grid, int index, unsigned size)
+/** @brief Checks if the puzzle is valid or not.
+ *
+ * The puzzle is valid if it meets or can meet the following requirements:
+ * - All rows and columns are balanced, i.e. contain as many 1's as 0's.
+ * - No row or column has three adjacent cells with the same value.
+ * - All rows and columns are unique. 
+ *
+ * The first two requirements are explained in their corresponding fuctions.
+ * The uniqueness constraint is enforced by comparing each row and column
+ * with all previously seen rows and columns. This is only done for rows
+ * and columns that contain no empty cells.
+ *
+ * @param puzzle The puzzle to be checked for validity.
+ *
+ * @return true if the puzzle is valid, false otherwise.
+ */
+bool isValid(const Puzzle* puzzle)
+{
+    unsigned char rows[puzzle->size];
+    unsigned char cols[puzzle->size];
+    int rows_index = 0;
+    int cols_index = 0; 
+
+    for (int i = 0; i < puzzle->size; i++)
+    {   
+        unsigned char row = getRow(puzzle->grid, i, puzzle->size);
+        unsigned char col = getCol(puzzle->grid, i, puzzle->size);
+        unsigned char row_actions = getRow(puzzle->actions, i, puzzle->size);
+        unsigned char col_actions = getCol(puzzle->actions, i, puzzle->size);
+        
+        if (!isBalanced(row, row_actions, puzzle->size) ||
+            !isBalanced(col, col_actions, puzzle->size) ||
+            hasTriplets(row, row_actions, puzzle->size) ||
+            hasTriplets(col, col_actions, puzzle->size))
+        {
+            return false;
+        }
+
+        if (!row_actions)
+        {
+            for (int j = 0; j < rows_index; j++)
+            {
+                if (row == rows[j]) { return false; }
+            }
+            rows[rows_index++] = row;
+        }
+
+        if (!col_actions)
+        {
+            for (int j = 0; j < cols_index; j++)
+            {
+                if (col == cols[j]) { return false; }
+            }
+            cols[cols_index++] = col;
+        }
+    }
+    return true;
+}
+
+/** @brief Extracts the row at the specified index from 'grid'.
+ *
+ * The desired row is obtained by right shifting the relevant bits into the 
+ * N least significant bits. The rest of the bits are discarded with a bitmask.
+ * Since N <= 8, converting unsigned long long to unsigned char is safe.
+ *
+ * @param grid The unsigned long long integer representing the grid.
+ * @param index The index of the row to retrieve (0 is bottom, N-1 is top row).
+ * @param rowLength The number of cells in one row.
+ *
+ * @return The extracted row as an unsigned char. 
+ */
+unsigned char getRow(unsigned long long grid, int index, unsigned rowLength)
+{
+    return (grid >> index * rowLength) & (1ULL << rowLength) - 1; 
+}
+
+/** @brief Extracts the column at the specified index from 'grid'.
+ *
+ * The desired column is obtained by first aligning the relevant column
+ * with the least significant bit, 'grid >>= index'. Then, we can iterate
+ * through each row in the column by right shifting the grid N positions.
+ * The current value of col is left shifted by 1 to make room for the next bit.
+ * Lastly, bitwise OR that next bit with the least significant bit of 'grid'.
+ * Since N <= 8, converting unsigned long long to unsigned char is safe.
+ *
+ * @param grid The unsigned long long integer representing the grid.
+ * @param index The index of the column to retrieve (0 is right, N-1 is left column).
+ * @param colLength The number of cells in one column.
+ * 
+ * @return The extracted column as an unsigned char.
+*/ 
+unsigned char getCol(unsigned long long grid, int index, unsigned colLength)
 {
     unsigned char col = 0;
     grid >>= index;
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < colLength; i++)
     {
         col = col << 1 | grid & 1ULL;
-        grid >>= size;
+        grid >>= colLength;
     }
     return col;
 }
@@ -92,61 +185,7 @@ bool hasTriplets(unsigned char rowOrCol, unsigned char actions, unsigned size)
     return false;
 }
 
-/// @brief Checks if the puzzle is valid or not.
-///
-/// The puzzle is valid if it meets or can meet the following requirements:
-/// - All rows and columns are balanced, i.e. contain as many 1's as 0's.
-/// - No row or column has three adjacent cells with the same value.
-/// - All rows and columns are unique. 
-///
-/// The first two requirements are explained in their corresponding fuctions.
-/// The uniqueness constraint is enforced by comparing each row and column
-/// with all previously seen rows and columns. This is only done for rows
-/// and columns that contain no empty cells.
-///
-/// @param puzzle The puzzle to be checked for validity.
-///
-/// @return True if the puzzle valid, false otherwise.
-bool isValid(const Puzzle* puzzle)
-{
-    unsigned char rows[puzzle->size];
-    unsigned char cols[puzzle->size];
-    int rows_index = 0;
-    int cols_index = 0; 
 
-    for (int i = 0; i < puzzle->size; i++)
-    {   
-        unsigned char row = getRow(puzzle->grid, i, puzzle->size);
-        unsigned char col = getCol(puzzle->grid, i, puzzle->size);
-        unsigned char row_actions = getRow(puzzle->actions, i, puzzle->size);
-        unsigned char col_actions = getCol(puzzle->actions, i, puzzle->size);
-        
-        if (!isBalanced(row, row_actions, puzzle->size) || hasTriplets(row, row_actions, puzzle->size) ||
-            !isBalanced(col, col_actions, puzzle->size) || hasTriplets(col, col_actions, puzzle->size))
-        {
-            return false;
-        }
-
-        if (!row_actions)
-        {
-            for (int j = 0; j < rows_index; j++)
-            {
-                if (row == rows[j]) { return false; }
-            }
-            rows[rows_index++] = row;
-        }
-
-        if (!col_actions)
-        {
-            for (int j = 0; j < cols_index; j++)
-            {
-                if (col == cols[j]) { return false; }
-            }
-            cols[cols_index++] = col;
-        }
-    }
-    return true;
-}
 
 /// @brief Prints out a nicely formatted version of the grid.
 ///
@@ -175,28 +214,6 @@ void printPuzzle(const Puzzle* puzzle)
 }
 
 
-bool solve(Puzzle puzzle)
-{   
-    for (int i = 0; i < puzzle.size*puzzle.size; i++)
-    {
-        if (!(puzzle.actions & 1ULL << i)) { continue; }
-
-        // try 0
-        puzzle.actions ^= 1ULL << i; 
-        if (isValid(&puzzle) && solve(puzzle)) { return true; }
-
-        // try 1
-        puzzle.grid |= 1ULL << i;
-        if (isValid(&puzzle) && solve(puzzle)){ return true; }
-
-        // no solution
-        return false;
-    }
-    // If no empty cells remain, the puzzle is solved
-    //printf("Solved!\n");
-    //printPuzzle(&puzzle);
-    return true;
-}
 
 /**
  * @brief Validates the string representation of a Takuzu puzzle.

@@ -1,6 +1,5 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <time.h>
 #include "takuzu.h"
 
 
@@ -20,20 +19,21 @@ int main(int argc, char** argv)
     }
 
     Puzzle puzzle = getPuzzle(argv[1]);
+    
+    if (!isValid(&puzzle))
+    {
+        printf("Error: Invalid puzzle provided.\n");
+        return EXIT_FAILURE;
+    }
 
-    struct timeval tv;
-    gettimeofday(&tv,NULL);
-    unsigned long start = 1000000 * tv.tv_sec + tv.tv_usec;
-    bool solved = solve(puzzle);
-    gettimeofday(&tv,NULL);
-    unsigned long end = 1000000 * tv.tv_sec + tv.tv_usec;
-
-    unsigned long duration = end-start;
-    printf("seconds: %d milli: %d micro: %d", duration / 1000000, duration / 1000, duration % 1000);
-
-    if (!solved)
+    if (solve(puzzle))
+    {
+        printf("Solved!\n");
+    }
+    else
     {
         printf("No solution found...\n");
     }
+
     return EXIT_SUCCESS;
 }
