@@ -1,27 +1,39 @@
+#include <stdlib.h>
 #include <stdio.h>
+#include <time.h>
 #include "takuzu.h"
 
 
 int main(int argc, char** argv)
 {
-    /* An unsigned long long is used to represented a grid, in which each cell
-    is represented by a bit (unsigned long long is 64 bits so the max grid size
-    is 8x8). Cells that are empty or filled in with 0 cannot be distinguished,
-    so 'actions' keeps track of which bits are empty. Initially, all cells are
-    empty so all bits in 'state' are 0 and all bits in 'actions' are 1. */
-    unsigned long long grid = 0;
-    unsigned long long actions = -1;
-
-    // Read puzzle from command-line and update grid and actions accordingly.
     if (argc != 2)
     {
-        printf("Usage: .\\takuzu.exe 'puzzle_string'");
-        return 1;
+        printf("Error: Invalid number of arguments.\n");
+        printf("Usage: %s [puzzleString]\n", argv[0]);
+        printf("Example: %s '0  1      000  0'\n", argv[0]);
+        return EXIT_FAILURE;
     }
-    const char* puzzle = argv[1];
-    if (load(puzzle, &grid, &actions));
-        // printGrid(grid, actions);
-        solve(grid, actions);
 
-    return 0;
+    if (!isValidPuzzleString(argv[1]))
+    {
+        return EXIT_FAILURE;
+    }
+
+    Puzzle puzzle = getPuzzle(argv[1]);
+
+    struct timeval tv;
+    gettimeofday(&tv,NULL);
+    unsigned long start = 1000000 * tv.tv_sec + tv.tv_usec;
+    bool solved = solve(puzzle);
+    gettimeofday(&tv,NULL);
+    unsigned long end = 1000000 * tv.tv_sec + tv.tv_usec;
+
+    unsigned long duration = end-start;
+    printf("seconds: %d milli: %d micro: %d", duration / 1000000, duration / 1000, duration % 1000);
+
+    if (!solved)
+    {
+        printf("No solution found...\n");
+    }
+    return EXIT_SUCCESS;
 }

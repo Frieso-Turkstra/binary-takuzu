@@ -1,5 +1,5 @@
 #include <stdio.h>  // for printf()
-#include <limits.h> // for ULLONG_MAX
+#include <math.h>
 #include "takuzu.h"
 
 
@@ -13,11 +13,10 @@
 /// @param index The index of the row to retrieve (0 is bottom, N-1 is top row).
 ///
 /// @return The extracted row as an unsigned char. 
-unsigned char getRow(unsigned long long grid, int index)
+unsigned char getRow(unsigned long long grid, int index, unsigned size)
 {
-    return (grid >> index * N) & (1 << N) - 1; 
+    return (grid >> index * size) & (1 << size) - 1; 
 }
-
 
 /// @brief Extracts the column at the specified index from 'grid'.
 ///
@@ -32,18 +31,17 @@ unsigned char getRow(unsigned long long grid, int index)
 /// @param index The index of the column to retrieve (0 is right, N-1 is left column).
 ///
 /// @return The extracted column as an unsigned char. 
-unsigned char getCol(unsigned long long grid, int index)
+unsigned char getCol(unsigned long long grid, int index, unsigned size)
 {
     unsigned char col = 0;
     grid >>= index;
-    for (int i = 0; i < N; i++)
+    for (int i = 0; i < size; i++)
     {
         col = col << 1 | grid & 1ULL;
-        grid >>= N;
+        grid >>= size;
     }
     return col;
 }
-
 
 /// @brief Checks if the row or column is or can become balanced.
 ///
@@ -55,20 +53,19 @@ unsigned char getCol(unsigned long long grid, int index)
 /// @param actions The actions available (empty cells) in the row or column.
 ///
 /// @return True if there are no more than N/2 1's or 0's, false otherwise.
-bool isBalanced(unsigned char rowOrCol, unsigned char actions)
+bool isBalanced(unsigned char rowOrCol, unsigned char actions, unsigned size)
 {
     int count_0 = 0;
     int count_1 = 0;
-    for (int i = 0; i < N; i++)
+    for (int i = 0; i < size; i++)
     {
         if (!(actions & 1U)) { rowOrCol & 1U ? count_1++ : count_0++; }
 
         rowOrCol >>= 1;
         actions >>= 1;
     }
-    return (count_0 <= N/2) && (count_1 <= N/2);
+    return (count_0 <= size/2) && (count_1 <= size/2);
 }
-
 
 /// @brief Checks for three adjacent bits with the same value in a row or column.
 ///
@@ -81,9 +78,9 @@ bool isBalanced(unsigned char rowOrCol, unsigned char actions)
 /// @param actions The actions available (empty cells) in the row or column.
 ///
 /// @return True if triplets are found, false otherwise.
-bool hasTriplets(unsigned char rowOrCol, unsigned char actions)
+bool hasTriplets(unsigned char rowOrCol, unsigned char actions, unsigned size)
 {
-    for (int i = 0; i < N-2; i++)
+    for (int i = 0; i < size-2; i++)
     {
         if (!(actions & 7U))
         {
@@ -95,10 +92,9 @@ bool hasTriplets(unsigned char rowOrCol, unsigned char actions)
     return false;
 }
 
-
-/// @brief Checks if the grid is valid or not.
+/// @brief Checks if the puzzle is valid or not.
 ///
-/// The grid is valid if it meets or _can_ meet the following requirements:
+/// The puzzle is valid if it meets or can meet the following requirements:
 /// - All rows and columns are balanced, i.e. contain as many 1's as 0's.
 /// - No row or column has three adjacent cells with the same value.
 /// - All rows and columns are unique. 
@@ -108,26 +104,25 @@ bool hasTriplets(unsigned char rowOrCol, unsigned char actions)
 /// with all previously seen rows and columns. This is only done for rows
 /// and columns that contain no empty cells.
 ///
-/// @param grid The grid to be checked for validity.
-/// @param actions The actions available (empty cells) in the grid.
+/// @param puzzle The puzzle to be checked for validity.
 ///
-/// @return True if the grid valid, false otherwise.
-bool isValid(unsigned long long grid, unsigned long long actions)
+/// @return True if the puzzle valid, false otherwise.
+bool isValid(const Puzzle* puzzle)
 {
-    unsigned char rows[N];
-    unsigned char cols[N];
+    unsigned char rows[puzzle->size];
+    unsigned char cols[puzzle->size];
     int rows_index = 0;
     int cols_index = 0; 
 
-    for (int i = 0; i < N; i++)
+    for (int i = 0; i < puzzle->size; i++)
     {   
-        unsigned char row = getRow(grid, i);
-        unsigned char col = getCol(grid, i);
-        unsigned char row_actions = getRow(actions, i);
-        unsigned char col_actions = getCol(actions, i);
+        unsigned char row = getRow(puzzle->grid, i, puzzle->size);
+        unsigned char col = getCol(puzzle->grid, i, puzzle->size);
+        unsigned char row_actions = getRow(puzzle->actions, i, puzzle->size);
+        unsigned char col_actions = getCol(puzzle->actions, i, puzzle->size);
         
-        if (!isBalanced(row, row_actions) || hasTriplets(row, row_actions) ||
-            !isBalanced(col, col_actions) || hasTriplets(col, col_actions))
+        if (!isBalanced(row, row_actions, puzzle->size) || hasTriplets(row, row_actions, puzzle->size) ||
+            !isBalanced(col, col_actions, puzzle->size) || hasTriplets(col, col_actions, puzzle->size))
         {
             return false;
         }
@@ -153,14 +148,14 @@ bool isValid(unsigned long long grid, unsigned long long actions)
     return true;
 }
 
-
 /// @brief Prints out a nicely formatted version of the grid.
 ///
 /// @param grid The grid to be printed.
 /// @param actions The actions available (empty cells) in the grid.
-void printGrid  (unsigned long long grid, unsigned long long actions)
+void printPuzzle(const Puzzle* puzzle)
 {
-    for (unsigned i = 0; i < N*N; i++)
+    unsigned N = puzzle->size;
+    for (int i = 0; i < N*N; i++)
     {   
         // Start a new line every N cells (but skip the first)
         if (i % N == 0 && i)
@@ -171,96 +166,103 @@ void printGrid  (unsigned long long grid, unsigned long long actions)
         }
 
         // If the cell is empty, print a space, else, print the cell's value
-        printf(actions & 1U ? "   " : " %d ", grid & 1U);
+        printf(puzzle->actions >> i & 1ULL ? "   " : " %d ", puzzle->grid >> i & 1ULL);
 
         // Print a separator if it is not the last item in the row
         if (i % N != N-1) { printf("|"); }
-
-        grid >>= 1;
-        actions >>= 1;
     }
     printf("\n");
 }
 
 
-// Add documentation, i.e. doxygen comment
-bool solve(unsigned long long grid, unsigned long long actions)
-{
-    //if (!actions && isValid(grid, actions))
-    //{
-    //    printf("Solved!\n");
-    //    return grid;
-    //}
-
-    // for each possible action
-    for (int i = 0; i < N*N; i++)
+bool solve(Puzzle puzzle)
+{   
+    for (int i = 0; i < puzzle.size*puzzle.size; i++)
     {
-        if ((actions >> i) & 1ULL) // if cell is empty
-        {   
-            // try placing a 1
-            unsigned long long new_grid = grid | (1ULL << i);
-            unsigned long long new_actions = actions ^ (1ULL << i);
-            
-            // if it is valid, call the solve function on the new board
-            if (isValid(new_grid, new_actions) && solve(new_grid, new_actions))
-            {
-                if (!new_actions)
-                {
-                    printf("Solved!\n");
-                    printGrid(new_grid, new_actions);
-                }
-                return true;
-            }
+        if (!(puzzle.actions & 1ULL << i)) { continue; }
 
-            // backtrack, try placing a 0
-            if (isValid(grid, new_actions) && solve(grid, new_actions))
-            {
-                if (!new_actions)
-                {
-                    printf("Solved!\n");
-                    printGrid(grid, new_actions);
-                }
-                return true;
-            }
-            return false; // both options failed, backtracking
-        }
+        // try 0
+        puzzle.actions ^= 1ULL << i; 
+        if (isValid(&puzzle) && solve(puzzle)) { return true; }
+
+        // try 1
+        puzzle.grid |= 1ULL << i;
+        if (isValid(&puzzle) && solve(puzzle)){ return true; }
+
+        // no solution
+        return false;
     }
     // If no empty cells remain, the puzzle is solved
-    printf("Solved!\n");
-    printGrid(grid, actions);
+    //printf("Solved!\n");
+    //printPuzzle(&puzzle);
     return true;
 }
 
-bool load(const char* puzzle, unsigned long long* grid, unsigned long long* actions)
-{
-    // check for invalid characters and assert length = 4, 16, 36 or 64
+/**
+ * @brief Validates the string representation of a Takuzu puzzle.
+ * 
+ * A valid Takuzu puzzle consists of only '0's and '1's and has a length of 16,
+ * 36, or 64. Anything less than 16 renders the puzzle trivial, anything longer
+ * than 64 and the puzzle no longer fits in an unsigned long long integer.
+ * 
+ * @param puzzleString The string representation of the Takuzu puzzle to be validated.
+ * 
+ * @return true if the puzzle string is valid, false otherwise.
+ */
+bool isValidPuzzleString(const char* puzzleString)
+{   
+    int length = 0;
 
-    unsigned long long bit_mask = 1ULL;
-    while(*puzzle)
+    while (*puzzleString)
     {
-        // Ensure only valid characters are used
-        if (*puzzle != '1' && *puzzle != '0' && *puzzle != ' ')
+        if (*puzzleString != '1' && *puzzleString != '0' && *puzzleString != ' ')
         {
-            printf("Invalid character found: %c\n", *puzzle);
+            printf("Error: Invalid character found: %c.\n", *puzzleString);
+            printf("A valid Takuzu puzzle consists of only '0's and '1's.\n");
             return false;
         }
-
-        if (*puzzle == ' ') { bit_mask <<= 1; puzzle++; continue; } // skip empty cells
-
-        *actions ^= bit_mask; // cell is full so remove it from actions
-
-        // white cells are set to 1 (black cells are already 0)
-        if (*puzzle == '1') { *grid |= bit_mask; }
-
-        bit_mask <<= 1;
-        puzzle++;
+        puzzleString++;
+        length++;
     }
 
-    // only valid lengths are 2x2, 4x4, 6x6, 8x8 (bit_mask should equal 2**number_of_cells)
-    if (bit_mask != 16ULL && bit_mask != 65536ULL && bit_mask != 68719476736ULL && bit_mask != 18446744073709551615ULL)
+    if (length != 16 && length != 36 && length != 64)
     {
-        printf("Invalid puzzle length\n");
+        printf("Error: Invalid puzzle length: %d.\n", length);
+        printf("Puzzle length must be 16, 36 or 64.\n");
         return false;
     }
+
     return true;
+}
+
+/**
+ * @brief Parses the string representation of a Takuzu puzzle into a struct representation.
+ * 
+ * The grid is a binary representation of the puzzle using an unsigned long long
+ * integer in which each bit represents a cell in the grid (unsigned long long 
+ * is 64 bits so the max grid size is 8x8). Cells that are empty or are filled
+ * in with a 0 cannot be distinguished from each other, so 'actions' keeps track
+ * of which bits are empty. Initially, all cells are empty so all bits in 'grid'
+ * are 0 and all bits in 'actions' are 1. Size represents the size of the grid.
+ * 
+ * @param puzzleString The string representation of the Takuzu puzzle to be parsed.
+ * 
+ * @return A Puzzle struct representing the parsed puzzle.
+ */
+Puzzle getPuzzle(const char* puzzleString)
+{
+    Puzzle puzzle = { .grid = 0, .actions = -1, .size = 0 };
+
+    unsigned length = 0;
+    while (*puzzleString)
+    {   
+        if (*puzzleString != ' ') { puzzle.actions ^= 1ULL << length; }
+        if (*puzzleString == '1') { puzzle.grid |= 1ULL << length; }
+
+        length++;
+        puzzleString++;
+    }
+
+    puzzle.size = sqrt(length);
+    return puzzle;
 }
