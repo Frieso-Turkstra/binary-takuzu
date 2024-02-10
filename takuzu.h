@@ -9,14 +9,14 @@ typedef struct
     unsigned size;
 } Puzzle;
 
-bool isValidPuzzleString(const char* puzzleString);
-Puzzle getPuzzle(const char* puzzleString);
 bool solve(Puzzle puzzle);
 bool isValid(const Puzzle* puzzle);
-unsigned char getRow(unsigned long long grid, int index, unsigned N);
-unsigned char getCol(unsigned long long grid, int index, unsigned N);
-bool isBalanced(unsigned char rowOrCol, unsigned char actions, unsigned size);
-bool hasTriplets(unsigned char rowOrCol, unsigned char actions, unsigned size);
+Puzzle getRow(const Puzzle* puzzle, int index);
+Puzzle getCol(const Puzzle* puzzle, int index);
+bool isBalanced(const Puzzle* rowOrCol);
+bool hasTriplets(const Puzzle* rowOrCol);
 void printPuzzle(const Puzzle* puzzle);
+bool isValidPuzzleString(const char* puzzleString);
+Puzzle getPuzzle(const char* puzzleString);
 
 #endif

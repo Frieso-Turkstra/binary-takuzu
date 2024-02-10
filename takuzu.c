@@ -58,35 +58,28 @@ bool isValid(const Puzzle* puzzle)
 
     for (int i = 0; i < puzzle->size; i++)
     {   
-        unsigned char row = getRow(puzzle->grid, i, puzzle->size);
-        unsigned char col = getCol(puzzle->grid, i, puzzle->size);
-        unsigned char row_actions = getRow(puzzle->actions, i, puzzle->size);
-        unsigned char col_actions = getCol(puzzle->actions, i, puzzle->size);
+        Puzzle row = getRow(puzzle, i);
+        Puzzle col = getCol(puzzle, i);
         
-        if (!isBalanced(row, row_actions, puzzle->size) ||
-            !isBalanced(col, col_actions, puzzle->size) ||
-            hasTriplets(row, row_actions, puzzle->size) ||
-            hasTriplets(col, col_actions, puzzle->size))
-        {
-            return false;
-        }
+        if (!isBalanced(&row) || hasTriplets(&row)) { return false; }
+        if (!isBalanced(&col) || hasTriplets(&col)) { return false; }
 
-        if (!row_actions)
+        if (!row.actions)
         {
             for (int j = 0; j < rows_index; j++)
             {
-                if (row == rows[j]) { return false; }
+                if (row.grid == rows[j]) { return false; }
             }
-            rows[rows_index++] = row;
+            rows[rows_index++] = row.grid;
         }
 
-        if (!col_actions)
+        if (!col.actions)
         {
             for (int j = 0; j < cols_index; j++)
             {
-                if (col == cols[j]) { return false; }
+                if (col.grid == cols[j]) { return false; }
             }
-            cols[cols_index++] = col;
+            cols[cols_index++] = col.grid;
         }
     }
     return true;
@@ -104,9 +97,13 @@ bool isValid(const Puzzle* puzzle)
  *
  * @return The extracted row as an unsigned char. 
  */
-unsigned char getRow(unsigned long long grid, int index, unsigned rowLength)
+Puzzle getRow(const Puzzle* puzzle, int index)
 {
-    return (grid >> index * rowLength) & (1ULL << rowLength) - 1; 
+    return (Puzzle) {
+        .grid = (puzzle->grid >> index * puzzle->size) & (1ULL << puzzle->size) - 1,
+        .actions = (puzzle->actions >> index * puzzle->size) & (1ULL << puzzle->size) - 1,
+        .size = puzzle->size
+    };
 }
 
 /** @brief Extracts the column at the specified index from 'grid'.
@@ -124,73 +121,68 @@ unsigned char getRow(unsigned long long grid, int index, unsigned rowLength)
  * 
  * @return The extracted column as an unsigned char.
 */ 
-unsigned char getCol(unsigned long long grid, int index, unsigned colLength)
+Puzzle getCol(const Puzzle* puzzle, int index)
 {
-    unsigned char col = 0;
-    grid >>= index;
-    for (int i = 0; i < colLength; i++)
+    Puzzle col = { .grid = 0, .actions = 0, .size = puzzle->size };
+    
+    for (int i = 0; i < puzzle->size; i++)
     {
-        col = col << 1 | grid & 1ULL;
-        grid >>= colLength;
+        col.grid = col.grid << 1 | puzzle->grid >> (index + i * puzzle->size) & 1ULL;
+        col.actions = col.actions << 1 | puzzle->actions >> (index + i * puzzle->size) & 1ULL;
     }
     return col;
 }
 
-/// @brief Checks if the row or column is or can become balanced.
-///
-/// Iterate over the row or column and actions by right shifting once each step.
-/// For each step, check if the cell is non-empty using 'actions'.
-/// If the cell is non-empty, increase the count depending on the cell's value.
-///
-/// @param rowOrCol The row or column to be checked for balance.
-/// @param actions The actions available (empty cells) in the row or column.
-///
-/// @return True if there are no more than N/2 1's or 0's, false otherwise.
-bool isBalanced(unsigned char rowOrCol, unsigned char actions, unsigned size)
+/** @brief Checks if the row or column is or can become balanced.
+ *
+ * Iterate over the row or column and actions by right shifting once each step.
+ * For each step, check if the cell is non-empty using 'actions'.
+ * If the cell is non-empty, increase the count depending on the cell's value.
+ *
+ * @param rowOrCol The row or column to be checked for balance.
+ *
+ * @return true if there are no more than N/2 1's or 0's, false otherwise.
+ */
+bool isBalanced(const Puzzle* rowOrCol)
 {
     int count_0 = 0;
     int count_1 = 0;
-    for (int i = 0; i < size; i++)
+    for (int i = 0; i < rowOrCol->size; i++)
     {
-        if (!(actions & 1U)) { rowOrCol & 1U ? count_1++ : count_0++; }
-
-        rowOrCol >>= 1;
-        actions >>= 1;
+        if (!(rowOrCol->actions & 1ULL << i))
+        {
+            rowOrCol->grid & 1ULL << i ? count_1++ : count_0++;
+        }
     }
-    return (count_0 <= size/2) && (count_1 <= size/2);
+    return (count_0 <= rowOrCol->size/2) && (count_1 <= rowOrCol->size/2);
 }
 
-/// @brief Checks for three adjacent bits with the same value in a row or column.
-///
-/// The bitmask 7U (or 00000111) extracts the three least significant bits.
-/// Check if all three cells are non-empty using 'actions', if they are,
-/// add one to the row or column because 111 + 1 = 000 and 000 + 1 = 001
-/// so the result is <= 1 if the three least significant bits are equal.
-///
-/// @param rowOrCol The row or column to be checked for triplets.
-/// @param actions The actions available (empty cells) in the row or column.
-///
-/// @return True if triplets are found, false otherwise.
-bool hasTriplets(unsigned char rowOrCol, unsigned char actions, unsigned size)
+/** @brief Checks for three adjacent bits with the same value in a row or column.
+ *
+ * The bitmask 7U (or 00000111) extracts the three least significant bits.
+ * Check if all three cells are non-empty using 'actions', if they are,
+ * add one to the row or column because 111 + 1 = 000 and 000 + 1 = 001
+ * so the result is <= 1 if the three least significant bits are equal.
+ *
+ * @param rowOrCol The row or column to be checked for triplets.
+ *
+ * @return True if triplets are found, false otherwise.
+ */
+bool hasTriplets(const Puzzle* rowOrCol)
 {
-    for (int i = 0; i < size-2; i++)
+    for (int i = 0; i < rowOrCol->size-2; i++)
     {
-        if (!(actions & 7U))
+        if (!(rowOrCol->actions & 7ULL << i))
         {
-            if ((rowOrCol + 1 & 7U) <= 1) { return true; }
+            if ((rowOrCol->grid + 1 & 7ULL << i) <= 1) { return true; }
         }
-        rowOrCol >>= 1;
-        actions >>= 1;
     }
     return false;
 }
 
-
-
-/// @brief Prints out a nicely formatted version of the grid.
+/// @brief Prints out a nicely formatted version of the puzzle's grid.
 ///
-/// @param grid The grid to be printed.
-/// @param actions The actions available (empty cells) in the grid.
+/// @param puzzle The puzzle to be printed.
 void printPuzzle(const Puzzle* puzzle)
 {
     unsigned N = puzzle->size;
@@ -212,8 +204,6 @@ void printPuzzle(const Puzzle* puzzle)
     }
     printf("\n");
 }
-
-
 
 /**
  * @brief Validates the string representation of a Takuzu puzzle.
