@@ -16,7 +16,7 @@ Puzzle getCol(const Puzzle* puzzle, int index);
 bool isBalanced(const Puzzle* rowOrCol);
 bool hasTriplets(const Puzzle* rowOrCol);
 void printPuzzle(const Puzzle* puzzle);
-bool isValidPuzzleString(const char* puzzleString);
+bool validatePuzzleString(const char* puzzleString);
 Puzzle getPuzzle(const char* puzzleString);
 
 #endif

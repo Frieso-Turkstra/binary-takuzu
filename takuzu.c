@@ -8,7 +8,7 @@
  * 
  * For each empty cell in the grid, try 0 (a cell is 0 by default so we only
  * update actions). If the new grid is valid, solve it. If not, we fill in a 1.
- * If that also fails, the puzzle is not solvable. If no empty cells remain,
+ * If that also fails, the puzzle has no solution. If no empty cells remain,
  * the puzzle is solved and printed.
  * 
  * @param puzzle The Takuzu puzzle to be solved.
@@ -33,7 +33,8 @@ bool solve(Puzzle puzzle)
     return true;
 }
 
-/** @brief Checks if the puzzle is valid or not.
+/**
+ * @brief Checks if the puzzle is valid or not.
  *
  * The puzzle is valid if it meets or can meet the following requirements:
  * - All rows and columns are balanced, i.e. contain as many 1's as 0's.
@@ -85,17 +86,17 @@ bool isValid(const Puzzle* puzzle)
     return true;
 }
 
-/** @brief Extracts the row at the specified index from 'grid'.
+/**
+ * @brief Extracts the row at the specified index from the puzzle.
  *
  * The desired row is obtained by right shifting the relevant bits into the 
- * N least significant bits. The rest of the bits are discarded with a bitmask.
- * Since N <= 8, converting unsigned long long to unsigned char is safe.
+ * N least significant bits where N is size. The rest of the bits are discarded
+ * with a bitmask.
  *
- * @param grid The unsigned long long integer representing the grid.
- * @param index The index of the row to retrieve (0 is bottom, N-1 is top row).
- * @param rowLength The number of cells in one row.
+ * @param puzzle The puzzle from which to extract the row.
+ * @param index The index of the row to retrieve (0 is bottom, N-1 is top).
  *
- * @return The extracted row as an unsigned char. 
+ * @return A Puzzle struct containing the extracted row, actions and size.
  */
 Puzzle getRow(const Puzzle* puzzle, int index)
 {
@@ -106,20 +107,19 @@ Puzzle getRow(const Puzzle* puzzle, int index)
     };
 }
 
-/** @brief Extracts the column at the specified index from 'grid'.
+/**
+ * @brief Extracts the column at the specified index from the puzzle.
  *
- * The desired column is obtained by first aligning the relevant column
- * with the least significant bit, 'grid >>= index'. Then, we can iterate
- * through each row in the column by right shifting the grid N positions.
+ * The column is extracted for both the puzzle's grid and its actions.
+ * The grid is first aligned with the least significant bit by adding index.
+ * Then, we iterate through the column by right shifting an additional i*size.
  * The current value of col is left shifted by 1 to make room for the next bit.
- * Lastly, bitwise OR that next bit with the least significant bit of 'grid'.
- * Since N <= 8, converting unsigned long long to unsigned char is safe.
+ * Lastly, bitwise OR that next bit with the least significant bit of the grid.
  *
- * @param grid The unsigned long long integer representing the grid.
- * @param index The index of the column to retrieve (0 is right, N-1 is left column).
- * @param colLength The number of cells in one column.
+ * @param puzzle The puzzle from which to extract the column.
+ * @param index The index of the column to retrieve (0 is right, N-1 is left).
  * 
- * @return The extracted column as an unsigned char.
+ * @return A Puzzle struct containing the extracted column, actions and size.
 */ 
 Puzzle getCol(const Puzzle* puzzle, int index)
 {
@@ -133,15 +133,14 @@ Puzzle getCol(const Puzzle* puzzle, int index)
     return col;
 }
 
-/** @brief Checks if the row or column is or can become balanced.
+/**
+ * @brief Checks if the row or column is or can become balanced.
  *
- * Iterate over the row or column and actions by right shifting once each step.
- * For each step, check if the cell is non-empty using 'actions'.
- * If the cell is non-empty, increase the count depending on the cell's value.
+ * For each non-empty cell, increase the count depending on the cell's value.
  *
  * @param rowOrCol The row or column to be checked for balance.
  *
- * @return true if there are no more than N/2 1's or 0's, false otherwise.
+ * @return true if there are no more than size/2 1's or 0's , false otherwise.
  */
 bool isBalanced(const Puzzle* rowOrCol)
 {
@@ -157,7 +156,8 @@ bool isBalanced(const Puzzle* rowOrCol)
     return (count_0 <= rowOrCol->size/2) && (count_1 <= rowOrCol->size/2);
 }
 
-/** @brief Checks for three adjacent bits with the same value in a row or column.
+/**
+ * @brief Checks for three adjacent bits with the same value in a row or column.
  *
  * The bitmask 7U (or 00000111) extracts the three least significant bits.
  * Check if all three cells are non-empty using 'actions', if they are,
@@ -166,7 +166,7 @@ bool isBalanced(const Puzzle* rowOrCol)
  *
  * @param rowOrCol The row or column to be checked for triplets.
  *
- * @return True if triplets are found, false otherwise.
+ * @return true if triplets are found, false otherwise.
  */
 bool hasTriplets(const Puzzle* rowOrCol)
 {
@@ -180,27 +180,29 @@ bool hasTriplets(const Puzzle* rowOrCol)
     return false;
 }
 
-/// @brief Prints out a nicely formatted version of the puzzle's grid.
-///
-/// @param puzzle The puzzle to be printed.
+/**
+ * @brief Prints out a nicely formatted version of the puzzle's grid.
+ * 
+ * Starts a new line every N cells where N is puzzle->size (but skip the first).
+ * If the cell is empty, prints a space, else prints the cell's value.
+ * Prints a separator if it is not the last item in the row.
+ * 
+ * @param puzzle The puzzle to be printed.
+ */
 void printPuzzle(const Puzzle* puzzle)
 {
-    unsigned N = puzzle->size;
-    for (int i = 0; i < N*N; i++)
+    for (int i = 0; i < puzzle->size*puzzle->size; i++)
     {   
-        // Start a new line every N cells (but skip the first)
-        if (i % N == 0 && i)
+        if (i % puzzle->size == 0 && i)
         {
             printf("\n");
-            for (int j = 0; j < N-1; j++) { printf("---+"); }
+            for (int j = 0; j < puzzle->size-1; j++) { printf("---+"); }
             printf("---\n");
         }
 
-        // If the cell is empty, print a space, else, print the cell's value
         printf(puzzle->actions >> i & 1ULL ? "   " : " %d ", puzzle->grid >> i & 1ULL);
 
-        // Print a separator if it is not the last item in the row
-        if (i % N != N-1) { printf("|"); }
+        if (i % puzzle->size != puzzle->size-1) { printf("|"); }
     }
     printf("\n");
 }
@@ -212,11 +214,11 @@ void printPuzzle(const Puzzle* puzzle)
  * 36, or 64. Anything less than 16 renders the puzzle trivial, anything longer
  * than 64 and the puzzle no longer fits in an unsigned long long integer.
  * 
- * @param puzzleString The string representation of the Takuzu puzzle to be validated.
+ * @param puzzleString The string representation of the puzzle to be validated.
  * 
  * @return true if the puzzle string is valid, false otherwise.
  */
-bool isValidPuzzleString(const char* puzzleString)
+bool validatePuzzleString(const char* puzzleString)
 {   
     int length = 0;
 
@@ -243,7 +245,7 @@ bool isValidPuzzleString(const char* puzzleString)
 }
 
 /**
- * @brief Parses the string representation of a Takuzu puzzle into a struct representation.
+ * @brief Parses the string representation of a Takuzu puzzle into a struct.
  * 
  * The grid is a binary representation of the puzzle using an unsigned long long
  * integer in which each bit represents a cell in the grid (unsigned long long 
@@ -252,7 +254,7 @@ bool isValidPuzzleString(const char* puzzleString)
  * of which bits are empty. Initially, all cells are empty so all bits in 'grid'
  * are 0 and all bits in 'actions' are 1. Size represents the size of the grid.
  * 
- * @param puzzleString The string representation of the Takuzu puzzle to be parsed.
+ * @param puzzleString The string representation of the puzzle to be parsed.
  * 
  * @return A Puzzle struct representing the parsed puzzle.
  */
